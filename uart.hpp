@@ -6,19 +6,16 @@
 
 #include <stdint.h>
 
-#define port_name "blahblah"
+#define OPEN_FLAGS O_CREAT|S_IRUSR
 
 // file stuff
-static int file_open_and_get_descriptor(const char *fname);
-static int file_write_data(int fd, uint8_t *buff, uint32_t len_buff);
-static int file_read_data(int fd, uint8_t *buff, uint32_t len_buff);
+fs::path get_new_filename(const fs::path& dir_path);
+static int open_new_log_file();
 static int file_close(int fd);
-
 // serial port stuff
-static void open_serial_port(void);
+static int open_serial_port(void);
 static void configure_serial_port(void);
 static void close_serial_port(void);
-
 // run run run
 static void run(void);
 
