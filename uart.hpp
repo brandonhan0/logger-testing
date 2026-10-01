@@ -9,17 +9,17 @@
 #define OPEN_FLAGS O_CREAT|S_IRUSR
 
 // file stuff
-fs::path get_new_filename(const fs::path& dir_path);
-static int open_new_log_file();
-static int file_close(int fd);
-// serial port stuff
-static int open_serial_port(void);
-static void configure_serial_port(void);
-static void close_serial_port(void);
-// run run run
-static void run(void);
+// fs::path get_new_filename(const fs::path& dir_path);
+// static int open_new_log_file();
+// static int file_close(int fd);
+// // serial port stuff
+// static int open_serial_port(void);
+// static void configure_serial_port(void);
+// static void close_serial_port(void);
+// // run run run
+// static void run(void);
 
 // main
-int main(void);
+// int main(void);
 
 #endif
