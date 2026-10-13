@@ -28,6 +28,6 @@ class uart{
         ssize_t receive(void* buff, size_t buff_len);
         void terminate(void);
 
-}
+};
 
 #endif
