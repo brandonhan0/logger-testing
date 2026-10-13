@@ -1,35 +1,13 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdint.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <termios.h>
-#include <filesystem>
-#include "uart.hpp"
-
+#include "uart.h"
 // ADAPTED FROM: https://github.com/sckulkarni246/ke-rpi-samples/tree/main/uart-c-termios
-
-/* TODO --------------------------------------------------
-- gotta get a real buff size (?)
-- gotta make it object-oriented
-*/
-
-// maps to hardware on pi that's able to work at 1MBaud/s
-//#define SERIAL_PORT_PATH                "/dev/ttyAMA0"
-
-// maps to pi hardware that works at 1MBaud/s but it's clock isn't as stable
-#define SERIAL_PORT_PATH		"/dev/ttyS0"
 
 // globals
 struct termios uart_tty;
-int uart_fd;
-int log_file_fd;
+int uart_fd = -1;
 
 // SERIAL PORT  --------------------------------------------------
 // opens and configures serial port for UART
-static void init_serial_port(void){
+void uart::init(void){
     uart_fd = open(SERIAL_PORT_PATH, O_RDWR | O_NONBLOCK);
     if(uart_fd < 0){
         perror("Couldn't open UART terminal interface\n");
@@ -47,12 +25,12 @@ static void init_serial_port(void){
 
     cfmakeraw(&uart_tty);
 
-    // Explicit 8-N-1, receiver enabled, no hardware flow control.
+    // defining terminal control modes
     uart_tty.c_cflag &= ~PARENB;      // no parity
     uart_tty.c_cflag &= ~CSTOPB;      // one stop bit
-    uart_tty.c_cflag &= ~CSIZE;
-    uart_tty.c_cflag |= CS8;          // eight data bits
-    uart_tty.c_cflag |= CLOCAL | CREAD;
+    uart_tty.c_cflag &= ~CSIZE;       // character size mask
+    uart_tty.c_cflag |= CS8;          // eight data bits = character
+    uart_tty.c_cflag |= CLOCAL | CREAD; // ignore modem control lines, enable receiver
     uart_tty.c_cflag &= ~CRTSCTS;     // no RTS/CTS flow control
 
     // wait until we receive at least 1 byte
@@ -66,14 +44,31 @@ static void init_serial_port(void){
     }
 }
 
-static void close_serial_port(void) {
+ssize_t uart::send(void* buff, size_t buff_len){
+    ssize_t bytes_write = write(uart_fd, (const void*)buff, buff_len);
+    if(bytes_write == -1){
+        printf("Error on uart_write() call!\n");
+        return -1;
+    }
+    return bytes_write;
+}
+
+ssize_t uart::receive(void* buff, size_t buff_len){
+    ssize_t bytes_read = read(uart_fd, (void*)buff, buff_len);
+    if(bytes_read == -1){
+        printf("Error on uart_read() call!\n");
+        return -1;
+    }
+    return bytes_read;
+}
+
+void uart::terminate(void) {
     // todo: use cfsetospeed(uart_tty, 0) to close connection?
     close(uart_fd);
 }
 
-
 // RUNNIN' ---------------------------------------------
-static int run_demo(){
+static int run_demo(uart uart_o){
     uint8_t l_buff[256];
     uint32_t l_len_buff = 256;
     uint32_t l_looper;
@@ -83,11 +78,11 @@ static int run_demo(){
         l_buff[l_looper] = l_looper;
 
     // write to tx, sleep, clear buff
-    write(uart_fd,l_buff,l_len_buff);
+    uart_o.send(l_buff, l_len_buff);
     sleep(1);
     memset(l_buff,0,l_len_buff);
     // read from rx
-    read(uart_fd,l_buff,l_len_buff);
+    uart_o.receive(l_buff, l_len_buff);
     // print it out
     printf("|");
     for(l_looper=0; l_looper<l_len_buff; ++l_looper) {
@@ -102,21 +97,20 @@ static int run_demo(){
     return 1;
 }
 
-
-
 // MAIN --------------------------------------------------
 int main(void) {
+    uart uart_o;
     printf("Starting...\r\n");
 
     // init port and file
     printf("Initializing serial port...\n");
-    init_serial_port();
+    uart_o.init();
 
     printf("Running...\n");
-    run_demo();
+    run_demo(uart_o);
 
     printf("Closing...\n");
-    close_serial_port();
+    uart_o.terminate();
 
     return 0;
 }
